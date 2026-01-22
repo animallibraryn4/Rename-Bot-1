@@ -1,10 +1,9 @@
+from helper.database import dbcol, get_metadata, setmeta, get_title, set_title, get_author, set_author, get_artist, set_artist, get_audio, set_audio, get_subtitle, set_subtitle, get_video, set_video
 from pyrogram import Client, filters
-from pyrogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
-from helper.database import *
-from script import *
-import re
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from config import Txt
 
-# At the top of metadata.py, define excluded commands for input handler
+# At the top of metadata.py, define excluded commands
 EXCLUDED_COMMANDS = [
     "start", "help", "metadata", "verify", "get_token", 
     "autorename", "setmedia", "info", "set_caption", 
@@ -14,41 +13,33 @@ EXCLUDED_COMMANDS = [
     "sf", "fileseq", "ls", "plan", "smart_thumb", 
     "mode", "caption", "meta", "file_names", 
     "thumbnail", "metadatax", "source", "premiumx", 
-    "plans", "about", "home", "myplan", "ping", 
-    "viewthumb", "delthumb", "users", "allids", 
-    "upgrade", "warn", "addpremium", "ceasepower", 
-    "resetpower"
+    "plans", "about", "home"
 ]
 
-async def get_metadata_summary(chat_id):
+async def clear_metadata_state(user_id):
+    """Editing mode clear"""
+    dbcol.update_one(
+        {"_id": int(user_id)},
+        {"$unset": {"editing_metadata_field": "", "editing_message_id": ""}}
+    )
+
+async def get_metadata_summary(user_id):
     """Generate a summary of all metadata settings"""
-    user_data = find(chat_id)
-    if user_data and len(user_data) >= 10:
-        metadata = user_data[2]
-        title = user_data[4]
-        author = user_data[5]
-        artist = user_data[6]
-        audio = user_data[7]
-        subtitle = user_data[8]
-        video = user_data[9]
-    else:
-        metadata = "Off"
-        title = get_title(chat_id)
-        author = get_author(chat_id)
-        artist = get_artist(chat_id)
-        audio = get_audio(chat_id)
-        subtitle = get_subtitle(chat_id)
-        video = get_video(chat_id)
+    current = get_metadata(user_id)
+    title = get_title(user_id)
+    author = get_author(user_id)
+    artist = get_artist(user_id)
+    video = get_video(user_id)
+    audio = get_audio(user_id)
+    subtitle = get_subtitle(user_id)
     
     summary = f"""
-📋 **Metadata Status:** `{metadata}`
-────────────────────
-📝 **Title:** `{title if title else 'Not Set'}`
-👤 **Author:** `{author if author else 'Not Set'}`
-🎨 **Artist:** `{artist if artist else 'Not Set'}`
-🎵 **Audio:** `{audio if audio else 'Not Set'}`
-📜 **Subtitle:** `{subtitle if subtitle else 'Not Set'}`
-🎬 **Video:** `{video if video else 'Not Set'}`
+  **Title:** `{title if title else 'Not Set'}`
+  **Author:** `{author if author else 'Not Set'}`
+  **Artist:** `{artist if artist else 'Not Set'}`
+  **Audio:** `{audio if audio else 'Not Set'}`
+  **Subtitle:** `{subtitle if subtitle else 'Not Set'}`
+  **Video:** `{video if video else 'Not Set'}`
 """
     return summary
 
@@ -119,20 +110,15 @@ def get_edit_field_keyboard(field):
     ]
     return InlineKeyboardMarkup(buttons)
 
-@Client.on_message(filters.private & filters.command("metadata"))
+@Client.on_message(filters.command("metadata"))
 async def metadata_main(client, message):
     user_id = message.from_user.id
-    user_data = find(user_id)
-    
-    if user_data and len(user_data) >= 3:
-        current_status = user_data[2]
-    else:
-        current_status = "Off"
+    current_status = get_metadata(user_id)
     
     summary = await get_metadata_summary(user_id)
     
     text = f"""
-**⚙️ Metadata Settings Panel**
+**Metadata Settings**
 
 ᴛʜɪꜱ ʟᴇᴛꜱ ʏᴏᴜ ᴄʜᴀɴɢᴇ ᴛʜᴇ ɴᴀᴍᴇꜱ ᴀɴᴅ ᴅᴇᴛᴀɪʟꜱ ꜱʜᴏᴡɴ ᴏɴ ʏᴏᴜʀ ᴍᴇᴅɪᴀ ꜰɪʟᴇꜱ.
 
@@ -151,14 +137,9 @@ async def metadata_main(client, message):
 async def metadata_callback_handler(client, query: CallbackQuery):
     user_id = query.from_user.id
     data = query.data
+    current = get_metadata(user_id)
     
-    user_data = find(user_id)
-    if user_data and len(user_data) >= 3:
-        current = user_data[2]
-    else:
-        current = "Off"
-    
-    # Handle toggle commands
+    # Handle toggle commands - NO NOTIFICATIONS
     if data == "on_metadata":
         setmeta(user_id, "On")
         await show_main_panel(query, user_id)
@@ -171,14 +152,16 @@ async def metadata_callback_handler(client, query: CallbackQuery):
     
     # Handle "Set Metadata" menu
     elif data == "set_metadata_menu":
+        # Don't edit if we're already on the set metadata menu
+        if "Set Metadata Values" in query.message.text:
+            return
+
         summary = await get_metadata_summary(user_id)
         
         text = f"""
-**⚙️ Set Metadata Values**
+**Your Metadata Is Currently: {current}**
 
-**Current Status:** `{current}`
-
-ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴍᴀᴋᴇ ᴄʜᴀɴɢᴇꜱ ᴛᴏ ʏᴏᴜʀ ꜰɪʟᴇ ᴍᴇᴛᴀᴅᴀᴛᴀ
+ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴍᴀᴋᴇ ᴄʜᴀɴɢᴇꜱ
 """
         keyboard = get_set_metadata_keyboard()
         await query.message.edit_text(text=text, reply_markup=keyboard)
@@ -190,12 +173,12 @@ async def metadata_callback_handler(client, query: CallbackQuery):
         await show_edit_field_prompt(query, user_id, field)
         return
     
-    # Handle cancel edit operation
+    # Handle cancel edit operation - DELETE WITH ANIMATION
     elif data.startswith("cancel_edit_"):
         field = data.split("_")[2]
         # Clear any editing state
-        clear_editing_state(user_id)
-        # Delete message
+        await clear_metadata_state(user_id)
+        # Delete message with animation
         await query.message.delete()
         return
     
@@ -206,37 +189,12 @@ async def metadata_callback_handler(client, query: CallbackQuery):
         text = f"""
 **📋 Current Metadata Overview**
 
+**Current status:** `{current}`
 {summary}
-
-────────────────────
-ℹ️ *Use the buttons below to navigate*
 """
         
         keyboard = get_view_all_keyboard()
-        await query.message.edit_text(text=text, reply_markup=keyboard, disable_web_page_preview=True)
-        return
-    
-    # Handle clearing field
-    elif data.startswith("clear_"):
-        field = data.split("_")[1]
-        field_display = field.capitalize()
-        
-        # Reset to default value
-        default_values = {
-            "title": "Encoded by @TechifyBots",
-            "author": "@TechifyBots",
-            "artist": "@TechifyBots",
-            "audio": "By @TechifyBots",
-            "subtitle": "By @TechifyBots",
-            "video": "Encoded By @TechifyBots"
-        }
-        
-        if field in default_values:
-            method_name = f"set_{field}"
-            method = globals().get(method_name)
-            if method:
-                method(user_id, default_values[field])
-                await show_set_metadata_menu(query, user_id)
+        await query.message.edit_text(text=text, reply_markup=keyboard)
         return
     
     # Handle back to home
@@ -246,29 +204,22 @@ async def metadata_callback_handler(client, query: CallbackQuery):
     
     # Handle meta info/help
     elif data == "meta_info":
-        help_text = """
-**📚 Metadata Help Guide**
+        if hasattr(Txt, 'META_TXT') and Txt.META_TXT in query.message.text:
+            return
+        meta_text = """
+**ℹ️ Metadata Information**
 
-Metadata is additional information embedded in your media files. This includes:
+**Title** - Displayed as the main name of the media file
+**Author** - The creator/author of the content
+**Artist** - The artist/performer name
+**Audio** - Audio track information
+**Subtitle** - Subtitle track information
+**Video** - Video track information
 
-**• Title** - Main name of the file
-**• Author** - Creator/uploader name  
-**• Artist** - Performer/artist name
-**• Audio** - Audio track title
-**• Subtitle** - Subtitle track title
-**• Video** - Video track title
-
-**How it works:**
-1. Enable metadata to apply changes
-2. Set individual values using buttons
-3. Send files - metadata will be added automatically
-4. Works with videos, audio, and documents
-
-**Note:** Metadata is applied using FFmpeg without re-encoding.
+These metadata fields will be embedded into your media files when metadata is enabled.
 """
-        
         await query.message.edit_text(
-            text=help_text,
+            text=meta_text,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup([
                 [
@@ -279,9 +230,8 @@ Metadata is additional information embedded in your media files. This includes:
         )
         return
     
-    # Handle close
+    # Handle close - DELETE WITH ANIMATION
     elif data == "close_meta":
-        clear_editing_state(user_id)
         await query.message.delete()
         return
 
@@ -290,9 +240,19 @@ async def show_edit_field_prompt(query, user_id, field):
     field_display = field.capitalize()
     
     # Get current value
-    get_method_name = f"get_{field}"
-    get_method = globals().get(get_method_name)
-    current_value = get_method(user_id) if get_method else "Not set"
+    field_methods = {
+        "title": get_title,
+        "author": get_author,
+        "artist": get_artist,
+        "audio": get_audio,
+        "subtitle": get_subtitle,
+        "video": get_video
+    }
+    
+    if field in field_methods:
+        current_value = field_methods[field](user_id)
+    else:
+        current_value = "Not set"
     
     # Get example value
     examples = {
@@ -311,28 +271,28 @@ async def show_edit_field_prompt(query, user_id, field):
 **Current {field_display}:** `{current_value}`
 
 **Example:** `{example}`
-
-────────────────────
-⚠️ *Send your new value in the next message*
 """
     
     keyboard = get_edit_field_keyboard(field)
     
     # Store which field we're editing and the message ID
-    set_editing_state(user_id, field, query.message.id)
+    dbcol.update_one(
+        {"_id": int(user_id)},
+        {"$set": {
+            "editing_metadata_field": field,
+            "editing_message_id": query.message.id
+        }}
+    )
     
     await query.message.edit_text(text=text, reply_markup=keyboard)
 
 async def show_main_panel(query, user_id):
     """Show the main metadata panel"""
-    user_data = find(user_id)
-    if user_data and len(user_data) >= 3:
-        current_status = user_data[2]
-    else:
-        current_status = "Off"
+    current_status = get_metadata(user_id)
+    summary = await get_metadata_summary(user_id)
 
     text = f"""
-**⚙️ Metadata Settings Panel**
+**Metadata Settings**
 
 ᴛʜɪꜱ ʟᴇᴛꜱ ʏᴏᴜ ᴄʜᴀɴɢᴇ ᴛʜᴇ ɴᴀᴍᴇꜱ ᴀɴᴅ ᴅᴇᴛᴀɪʟꜱ ꜱʜᴏᴡɴ ᴏɴ ʏᴏᴜʀ ᴍᴇᴅɪᴀ ꜰɪʟᴇꜱ.
 
@@ -341,45 +301,52 @@ async def show_main_panel(query, user_id):
     
     keyboard = get_main_menu_keyboard(current_status)
     
+    # Check if we're already showing this content to avoid MESSAGE_NOT_MODIFIED
+    current_text = query.message.text
+    if "Metadata Settings" in current_text:
+        # Content is the same, don't edit
+        return
+    
     await query.message.edit_text(text=text, reply_markup=keyboard)
 
 async def show_set_metadata_menu(query, user_id):
     """Show the set metadata menu"""
-    user_data = find(user_id)
-    if user_data and len(user_data) >= 3:
-        current = user_data[2]
-    else:
-        current = "Off"
-    
+    current = get_metadata(user_id)
+  
     text = f"""
-**⚙️ Set Metadata Values**
+**Your Metadata Is Currently: {current}**
 
-**Current Status:** `{current}`
-
-ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴍᴀᴋᴇ ᴄʜᴀɴɢᴇꜱ ᴛᴏ ʏᴏᴜʀ ꜰɪʟᴇ ᴍᴇᴛᴀᴅᴀᴛᴀ
+ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴍᴀᴋᴇ ᴄʜᴀɴɢᴇꜱ
 """
     keyboard = get_set_metadata_keyboard()
+    
+    # Check if we're already showing this content
+    if "Set Metadata Values" in query.message.text:
+        return
     
     await query.message.edit_text(text=text, reply_markup=keyboard)
 
 @Client.on_message(filters.private & ~filters.command(EXCLUDED_COMMANDS))
 async def handle_metadata_value_input(client, message):
-    """Handle text input for metadata fields"""
+    """Handle text input for metadata fields - SILENT UPDATE"""
     user_id = message.from_user.id
     
     # Check if user is in metadata editing mode
-    field, edit_message_id = get_editing_state(user_id)
-    if not field or not edit_message_id:
+    user_data = dbcol.find_one({"_id": int(user_id)})
+    if not user_data or "editing_metadata_field" not in user_data or "editing_message_id" not in user_data:
         return
-    
-    # Check if message.text exists
+
+    # FIX: Check if message.text exists before stripping
     if not message.text:
         try:
+            # Optionally alert the user or just delete the non-text message
             await message.delete()
         except:
             pass
         return
         
+    field = user_data["editing_metadata_field"]
+    edit_message_id = user_data["editing_message_id"]
     new_value = message.text.strip()
     
     # Update the specific field
@@ -396,12 +363,25 @@ async def handle_metadata_value_input(client, message):
         field_methods[field](user_id, new_value)
         
         # Clear editing flag
-        clear_editing_state(user_id)
+        await clear_metadata_state(user_id)
+        
+        # SILENT UPDATE: Edit the original prompt message with new current value
+        field_display = field.capitalize()
         
         # Get updated current value
-        get_method_name = f"get_{field}"
-        get_method = globals().get(get_method_name)
-        current_value = get_method(user_id) if get_method else "Not set"
+        get_methods = {
+            "title": get_title,
+            "author": get_author,
+            "artist": get_artist,
+            "audio": get_audio,
+            "subtitle": get_subtitle,
+            "video": get_video
+        }
+        
+        if field in get_methods:
+            current_value = get_methods[field](user_id)
+        else:
+            current_value = "Not set"
         
         # Get example value
         examples = {
@@ -415,34 +395,26 @@ async def handle_metadata_value_input(client, message):
         example = examples.get(field, "Your custom value")
         
         # Update the original edit prompt message
-        field_display = field.capitalize()
         updated_text = f"""
-**✅ {field_display} Updated Successfully!**
+**✏️ Send Me The New {field_display} Value:**
 
 **Current {field_display}:** `{current_value}`
 
 **Example:** `{example}`
-
-────────────────────
-*You can edit another field or go back*
 """
         
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✏️ Edit Again", callback_data=f"edit_{field}"),
-                InlineKeyboardButton("🔙 Back", callback_data="set_metadata_menu")
-            ]
-        ])
+        keyboard = get_edit_field_keyboard(field)
         
         try:
-            # Edit the original message
+            # Edit the original message using stored message ID
             await client.edit_message_text(
                 chat_id=user_id,
-                message_id=int(edit_message_id),
+                message_id=edit_message_id,
                 text=updated_text,
                 reply_markup=keyboard
             )
         except Exception as e:
+            # If message not found or other error, just continue
             print(f"Error editing message: {e}")
         
         # Delete the user's input message

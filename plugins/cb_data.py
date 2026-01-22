@@ -187,16 +187,17 @@ async def vid(bot, update):
         used_limit(update.from_user.id, neg_used)
         await ms.edit(e)
         return
+
     
+
     # Metadata Adding Code
-    _bool_metadata = find(int(message.chat.id))[2] 
-    
+    _bool_metadata = get_metadata(message.chat.id)
+
     if _bool_metadata:
-        metadata = find(int(message.chat.id))[3]
         metadata_path = f"Metadata/{new_filename}"
-        await add_metadata(path, metadata_path, metadata, ms)
+        await add_metadata(path, metadata_path, "", ms, user_id=message.chat.id)
     else:
-        await ms.edit("🚀 Mode Changing...  ⚡") 
+        await ms.edit("🚀 Mode Changing...  ⚡")
 
     splitpath = path.split("/downloads/")
     dow_file_name = splitpath[1]

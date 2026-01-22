@@ -66,6 +66,12 @@ async def doc(bot, update):
     
     file_path = f"downloads/{new_filename}"
     message = update.message.reply_to_message
+    
+    # ADDED CHECK: Ensure message exists
+    if not message:
+        await update.message.edit("❌ Error: Original message not found. Please try again.")
+        return
+    
     file = message.document or message.video or message.audio
     hinata = message
     ms = await update.message.edit("🚀 Try To Download...  ⚡")
@@ -214,6 +220,12 @@ async def vid(bot, update):
     
     file_path = f"downloads/{new_filename}"
     message = update.message.reply_to_message
+    
+    # ADDED CHECK: Ensure message exists
+    if not message:
+        await update.message.edit("❌ Error: Original message not found. Please try again.")
+        return
+    
     file = message.document or message.video or message.audio
     hinata = message
     ms = await update.message.edit("🚀 Try To Download...  ⚡")
@@ -371,6 +383,12 @@ async def aud(bot, update):
     
     file_path = f"downloads/{new_filename}"
     message = update.message.reply_to_message
+    
+    # ADDED CHECK: Ensure message exists
+    if not message:
+        await update.message.edit("❌ Error: Original message not found. Please try again.")
+        return
+    
     file = message.document or message.video or message.audio
     hinata = message
     total_used = used + int(file.file_size)

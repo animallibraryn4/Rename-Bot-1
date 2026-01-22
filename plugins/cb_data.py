@@ -56,7 +56,14 @@ async def doc(bot, update):
     used_ = find_one(update.from_user.id)
     used = used_["used_limit"]
     date = used_["date"]
-    new_filename = new_name.split(":-")[1]
+    
+    # FIXED: Added error handling for filename extraction
+    try:
+        new_filename = new_name.split(":-")[1]
+    except IndexError:
+        # If no ":-" found, use the whole text as filename
+        new_filename = new_name.strip()
+    
     file_path = f"downloads/{new_filename}"
     message = update.message.reply_to_message
     file = message.document or message.video or message.audio
@@ -197,8 +204,14 @@ async def vid(bot, update):
     used_ = find_one(update.from_user.id)
     used = used_["used_limit"]
     date = used_["date"]
-    # FIXED: Use consistent splitting with doc() function
-    new_filename = new_name.split(":-")[1]
+    
+    # FIXED: Added error handling for filename extraction
+    try:
+        new_filename = new_name.split(":-")[1]
+    except IndexError:
+        # If no ":-" found, use the whole text as filename
+        new_filename = new_name.strip()
+    
     file_path = f"downloads/{new_filename}"
     message = update.message.reply_to_message
     file = message.document or message.video or message.audio
@@ -348,8 +361,14 @@ async def aud(bot, update):
     new_name = update.message.text
     used_ = find_one(update.from_user.id)
     used = used_["used_limit"]
-    # FIXED: Use consistent splitting with doc() function
-    new_filename = new_name.split(":-")[1]
+    
+    # FIXED: Added error handling for filename extraction
+    try:
+        new_filename = new_name.split(":-")[1]
+    except IndexError:
+        # If no ":-" found, use the whole text as filename
+        new_filename = new_name.strip()
+    
     file_path = f"downloads/{new_filename}"
     message = update.message.reply_to_message
     file = message.document or message.video or message.audio

@@ -1,6 +1,6 @@
 from pyrogram import Client, idle
 from plugins.cb_data import app as Client2
-from plugins.metadata_new import *  # Add this line
+
 from config import *
 import pyromod
 import pyrogram.utils

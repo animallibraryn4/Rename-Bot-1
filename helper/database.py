@@ -1,7 +1,6 @@
 import pymongo
 import os
 import datetime
-import logging
 from helper.date import add_date
 from config import *
 
@@ -33,7 +32,7 @@ def total_size(chat_id, total_size, now_file_size):
     now = int(total_size) + now_file_size
     dbcol.update_one({"_id": chat_id}, {"$set": {"total_size": str(now)}})
 
-# Insert User Data with Extended Metadata Fields
+# Insert User Data with Advanced Metadata Fields
 def insert(chat_id):
     user_id = int(chat_id)
     user_det = {
@@ -46,34 +45,17 @@ def insert(chat_id):
         "used_limit": 0, 
         "usertype": "Free", 
         "prexdate": None,
-        "metadata": True,  # Default to True for metadata
-        "metadata_code": "Telegram : @TechifyBots",
+        "metadata": "Off",  # Changed from Boolean to String "On"/"Off"
+        "metadata_code": "By @TechifyBots",
+        # Advanced metadata fields
         "title": "Encoded by @TechifyBots",
         "author": "@TechifyBots",
         "artist": "@TechifyBots",
         "audio": "By @TechifyBots",
         "subtitle": "By @TechifyBots",
         "video": "Encoded By @TechifyBots",
-        "media_type": None,
-        "format_template": None,
-        "thumbnails": {},
-        "temp_quality": None,
-        "use_global_thumb": False,
-        "global_thumb": None,
-        "ban_status": {
-            "is_banned": False,
-            "ban_duration": 0,
-            "banned_on": datetime.date.max.isoformat(),
-            "ban_reason": ''
-        },
-        "metadata_profile": 1,  # Default profile 1
-        # Profile 2 fields
-        "title_profile_2": "Encoded by @TechifyBots",
-        "author_profile_2": "@TechifyBots",
-        "artist_profile_2": "@TechifyBots",
-        "audio_profile_2": "By @TechifyBots",
-        "subtitle_profile_2": "By @TechifyBots",
-        "video_profile_2": "Encoded By @TechifyBots"
+        "editing_metadata_field": "",  # For editing state
+        "editing_message_id": ""       # For editing state
     }
     try:
         dbcol.insert_one(user_det)
@@ -87,153 +69,86 @@ def addthumb(chat_id, file_id):
 def delthumb(chat_id):
     dbcol.update_one({"_id": chat_id}, {"$set": {"file_id": None}})
 
-# ============= Metadata Function Code =============== #
+# ============= ADVANCED METADATA FUNCTIONS =============== #
+
 def setmeta(chat_id, bool_meta):
+    """Set metadata status - 'On' or 'Off'"""
     dbcol.update_one({"_id": chat_id}, {"$set": {"metadata": bool_meta}})
 
 def setmetacode(chat_id, metadata_code):
+    """Set custom metadata code (legacy)"""
     dbcol.update_one({"_id": chat_id}, {"$set": {"metadata_code": metadata_code}})
 
-# Extended metadata functions
-def get_metadata(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('metadata', True) if user else True
+# Title functions
+def set_title(chat_id, title):
+    dbcol.update_one({"_id": chat_id}, {"$set": {"title": title}})
 
-def set_metadata(user_id, metadata):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'metadata': metadata}})
+def get_title(chat_id):
+    user = dbcol.find_one({"_id": chat_id})
+    return user.get("title", "Encoded by @TechifyBots") if user else "Encoded by @TechifyBots"
 
-def get_title(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('title', 'Encoded by @TechifyBots') if user else 'Encoded by @TechifyBots'
+# Author functions
+def set_author(chat_id, author):
+    dbcol.update_one({"_id": chat_id}, {"$set": {"author": author}})
 
-def set_title(user_id, title):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'title': title}})
+def get_author(chat_id):
+    user = dbcol.find_one({"_id": chat_id})
+    return user.get("author", "@TechifyBots") if user else "@TechifyBots"
 
-def get_author(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('author', '@TechifyBots') if user else '@TechifyBots'
+# Artist functions
+def set_artist(chat_id, artist):
+    dbcol.update_one({"_id": chat_id}, {"$set": {"artist": artist}})
 
-def set_author(user_id, author):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'author': author}})
+def get_artist(chat_id):
+    user = dbcol.find_one({"_id": chat_id})
+    return user.get("artist", "@TechifyBots") if user else "@TechifyBots"
 
-def get_artist(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('artist', '@TechifyBots') if user else '@TechifyBots'
+# Audio functions
+def set_audio(chat_id, audio):
+    dbcol.update_one({"_id": chat_id}, {"$set": {"audio": audio}})
 
-def set_artist(user_id, artist):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'artist': artist}})
+def get_audio(chat_id):
+    user = dbcol.find_one({"_id": chat_id})
+    return user.get("audio", "By @TechifyBots") if user else "By @TechifyBots"
 
-def get_audio(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('audio', 'By @TechifyBots') if user else 'By @TechifyBots'
+# Subtitle functions
+def set_subtitle(chat_id, subtitle):
+    dbcol.update_one({"_id": chat_id}, {"$set": {"subtitle": subtitle}})
 
-def set_audio(user_id, audio):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'audio': audio}})
+def get_subtitle(chat_id):
+    user = dbcol.find_one({"_id": chat_id})
+    return user.get("subtitle", "By @TechifyBots") if user else "By @TechifyBots"
 
-def get_subtitle(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('subtitle', "By @TechifyBots") if user else "By @TechifyBots"
+# Video functions
+def set_video(chat_id, video):
+    dbcol.update_one({"_id": chat_id}, {"$set": {"video": video}})
 
-def set_subtitle(user_id, subtitle):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'subtitle': subtitle}})
+def get_video(chat_id):
+    user = dbcol.find_one({"_id": chat_id})
+    return user.get("video", "Encoded By @TechifyBots") if user else "Encoded By @TechifyBots"
 
-def get_video(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('video', 'Encoded By @TechifyBots') if user else 'Encoded By @TechifyBots'
+# Editing state functions
+def set_editing_state(chat_id, field, message_id):
+    dbcol.update_one({"_id": chat_id}, {"$set": {
+        "editing_metadata_field": field,
+        "editing_message_id": message_id
+    }})
 
-def set_video(user_id, video):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'video': video}})
+def clear_editing_state(chat_id):
+    dbcol.update_one({"_id": chat_id}, {"$unset": {
+        "editing_metadata_field": "",
+        "editing_message_id": ""
+    }})
 
-# Profile Support Functions
-def get_current_profile(user_id):
-    user = dbcol.find_one({'_id': int(user_id)})
-    return user.get('metadata_profile', 1) if user else 1
+def get_editing_state(chat_id):
+    user = dbcol.find_one({"_id": chat_id})
+    if user:
+        field = user.get("editing_metadata_field", "")
+        message_id = user.get("editing_message_id", "")
+        return field, message_id
+    return "", ""
 
-def set_current_profile(user_id, profile_num):
-    dbcol.update_one({'_id': int(user_id)}, {'$set': {'metadata_profile': profile_num}})
-
-def get_metadata_field_with_profile(user_id, field, profile_num=None):
-    if profile_num is None:
-        profile_num = get_current_profile(user_id)
-    
-    profile_fields = {
-        "title": f"title_profile_{profile_num}" if profile_num == 2 else "title",
-        "author": f"author_profile_{profile_num}" if profile_num == 2 else "author",
-        "artist": f"artist_profile_{profile_num}" if profile_num == 2 else "artist",
-        "audio": f"audio_profile_{profile_num}" if profile_num == 2 else "audio",
-        "subtitle": f"subtitle_profile_{profile_num}" if profile_num == 2 else "subtitle",
-        "video": f"video_profile_{profile_num}" if profile_num == 2 else "video"
-    }
-    
-    field_key = profile_fields.get(field)
-    if not field_key:
-        return None
-    
-    user = dbcol.find_one({"_id": int(user_id)})
-    if user and field_key in user:
-        return user.get(field_key)
-    else:
-        # Fallback to default method
-        method_name = f"get_{field}"
-        method = globals().get(method_name)
-        if method:
-            return method(user_id)
-    return None
-
-def set_metadata_field_with_profile(user_id, field, value, profile_num=None):
-    if profile_num is None:
-        profile_num = get_current_profile(user_id)
-    
-    profile_fields = {
-        "title": f"title_profile_{profile_num}" if profile_num == 2 else "title",
-        "author": f"author_profile_{profile_num}" if profile_num == 2 else "author",
-        "artist": f"artist_profile_{profile_num}" if profile_num == 2 else "artist",
-        "audio": f"audio_profile_{profile_num}" if profile_num == 2 else "audio",
-        "subtitle": f"subtitle_profile_{profile_num}" if profile_num == 2 else "subtitle",
-        "video": f"video_profile_{profile_num}" if profile_num == 2 else "video"
-    }
-    
-    field_key = profile_fields.get(field)
-    if not field_key:
-        return False
-    
-    dbcol.update_one({"_id": int(user_id)}, {"$set": {field_key: value}})
-    return True
-
-def get_all_profiles_summary(user_id):
-    summary = {}
-    
-    for profile_num in [1, 2]:
-        profile_data = {}
-        for field in ["title", "author", "artist", "audio", "subtitle", "video"]:
-            value = get_metadata_field_with_profile(user_id, field, profile_num)
-            profile_data[field] = value
-        summary[f"profile_{profile_num}"] = profile_data
-    
-    return summary
-
-def copy_profile_to_profile(user_id, from_profile, to_profile):
-    fields = ["title", "author", "artist", "audio", "subtitle", "video"]
-    
-    for field in fields:
-        # Get value from source profile
-        from_field = f"{field}_profile_{from_profile}" if from_profile == 2 else field
-        user = dbcol.find_one({"_id": int(user_id)})
-        value = user.get(from_field) if user else None
-        
-        if value is None:
-            # If source profile field doesn't exist, get default
-            method_name = f"get_{field}"
-            method = globals().get(method_name)
-            if method:
-                value = method(user_id)
-        
-        # Set to target profile
-        to_field = f"{field}_profile_{to_profile}" if to_profile == 2 else field
-        dbcol.update_one({"_id": int(user_id)}, {"$set": {to_field: value}})
-    return True
-
-# ============= Metadata Function Code =============== #
+# ============= METADATA FUNCTION CODE =============== #
 
 # Add Caption Data
 def addcaption(chat_id, caption):
@@ -269,20 +184,18 @@ def find(chat_id):
     id = {"_id": chat_id}
     x = dbcol.find(id)
     for i in x:
-        file = i["file_id"]
-        try:
-            caption = i["caption"]
-        except:
-            caption = None
-        try:
-            metadata = i["metadata"]
-        except:
-            metadata = False
-        try:
-            metadata_code = i["metadata_code"]
-        except:
-            metadata_code = None
-        return [file, caption, metadata, metadata_code]
+        file = i.get("file_id", None)
+        caption = i.get("caption", None)
+        metadata = i.get("metadata", "Off")
+        metadata_code = i.get("metadata_code", "By @TechifyBots")
+        title = i.get("title", "Encoded by @TechifyBots")
+        author = i.get("author", "@TechifyBots")
+        artist = i.get("artist", "@TechifyBots")
+        audio = i.get("audio", "By @TechifyBots")
+        subtitle = i.get("subtitle", "By @TechifyBots")
+        video = i.get("video", "Encoded By @TechifyBots")
+        
+        return [file, caption, metadata, metadata_code, title, author, artist, audio, subtitle, video]
 
 def getid():
     values = []

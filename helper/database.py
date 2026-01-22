@@ -3,7 +3,6 @@ import os
 import datetime
 from helper.date import add_date
 from config import *
-
 mongo = pymongo.MongoClient(DATABASE_URL)
 db = mongo[DATABASE_NAME]
 dbcol = db["user"]
@@ -32,7 +31,7 @@ def total_size(chat_id, total_size, now_file_size):
     now = int(total_size) + now_file_size
     dbcol.update_one({"_id": chat_id}, {"$set": {"total_size": str(now)}})
 
-# Insert User Data with Advanced Metadata Fields
+# Insert User Data - UPDATED WITH ALL METADATA FIELDS
 def insert(chat_id):
     user_id = int(chat_id)
     user_det = {
@@ -45,22 +44,21 @@ def insert(chat_id):
         "used_limit": 0, 
         "usertype": "Free", 
         "prexdate": None,
-        "metadata": "Off",  # Changed from Boolean to String "On"/"Off"
-        "metadata_code": "By @TechifyBots",
-        # Advanced metadata fields
+        "metadata": "Off",  # Changed from boolean to string "On"/"Off"
+        "metadata_code": "By @TechifyBots",  # Keeping old field for backward compatibility
+        # New metadata fields
         "title": "Encoded by @TechifyBots",
         "author": "@TechifyBots",
         "artist": "@TechifyBots",
         "audio": "By @TechifyBots",
         "subtitle": "By @TechifyBots",
-        "video": "Encoded By @TechifyBots",
-        "editing_metadata_field": "",  # For editing state
-        "editing_message_id": ""       # For editing state
+        "video": "Encoded By @TechifyBots"
     }
     try:
         dbcol.insert_one(user_det)
     except:
         return True
+        pass
 
 # Add Thumbnail Data
 def addthumb(chat_id, file_id):
@@ -69,84 +67,73 @@ def addthumb(chat_id, file_id):
 def delthumb(chat_id):
     dbcol.update_one({"_id": chat_id}, {"$set": {"file_id": None}})
 
-# ============= ADVANCED METADATA FUNCTIONS =============== #
+# ============= NEW METADATA FUNCTIONS =============== #
+def setmeta(chat_id, metadata_status):
+    """Set metadata status: "On" or "Off" """
+    dbcol.update_one({"_id": chat_id}, {"$set": {"metadata": metadata_status}})
 
-def setmeta(chat_id, bool_meta):
-    """Set metadata status - 'On' or 'Off'"""
-    dbcol.update_one({"_id": chat_id}, {"$set": {"metadata": bool_meta}})
-
-def setmetacode(chat_id, metadata_code):
-    """Set custom metadata code (legacy)"""
-    dbcol.update_one({"_id": chat_id}, {"$set": {"metadata_code": metadata_code}})
-
-# Title functions
-def set_title(chat_id, title):
-    dbcol.update_one({"_id": chat_id}, {"$set": {"title": title}})
+def get_metadata(chat_id):
+    """Get metadata status"""
+    user = dbcol.find_one({"_id": chat_id})
+    return user.get("metadata", "Off") if user else "Off"
 
 def get_title(chat_id):
+    """Get title metadata"""
     user = dbcol.find_one({"_id": chat_id})
     return user.get("title", "Encoded by @TechifyBots") if user else "Encoded by @TechifyBots"
 
-# Author functions
-def set_author(chat_id, author):
-    dbcol.update_one({"_id": chat_id}, {"$set": {"author": author}})
+def set_title(chat_id, title):
+    """Set title metadata"""
+    dbcol.update_one({"_id": chat_id}, {"$set": {"title": title}})
 
 def get_author(chat_id):
+    """Get author metadata"""
     user = dbcol.find_one({"_id": chat_id})
     return user.get("author", "@TechifyBots") if user else "@TechifyBots"
 
-# Artist functions
-def set_artist(chat_id, artist):
-    dbcol.update_one({"_id": chat_id}, {"$set": {"artist": artist}})
+def set_author(chat_id, author):
+    """Set author metadata"""
+    dbcol.update_one({"_id": chat_id}, {"$set": {"author": author}})
 
 def get_artist(chat_id):
+    """Get artist metadata"""
     user = dbcol.find_one({"_id": chat_id})
     return user.get("artist", "@TechifyBots") if user else "@TechifyBots"
 
-# Audio functions
-def set_audio(chat_id, audio):
-    dbcol.update_one({"_id": chat_id}, {"$set": {"audio": audio}})
+def set_artist(chat_id, artist):
+    """Set artist metadata"""
+    dbcol.update_one({"_id": chat_id}, {"$set": {"artist": artist}})
 
 def get_audio(chat_id):
+    """Get audio metadata"""
     user = dbcol.find_one({"_id": chat_id})
     return user.get("audio", "By @TechifyBots") if user else "By @TechifyBots"
 
-# Subtitle functions
-def set_subtitle(chat_id, subtitle):
-    dbcol.update_one({"_id": chat_id}, {"$set": {"subtitle": subtitle}})
+def set_audio(chat_id, audio):
+    """Set audio metadata"""
+    dbcol.update_one({"_id": chat_id}, {"$set": {"audio": audio}})
 
 def get_subtitle(chat_id):
+    """Get subtitle metadata"""
     user = dbcol.find_one({"_id": chat_id})
     return user.get("subtitle", "By @TechifyBots") if user else "By @TechifyBots"
 
-# Video functions
-def set_video(chat_id, video):
-    dbcol.update_one({"_id": chat_id}, {"$set": {"video": video}})
+def set_subtitle(chat_id, subtitle):
+    """Set subtitle metadata"""
+    dbcol.update_one({"_id": chat_id}, {"$set": {"subtitle": subtitle}})
 
 def get_video(chat_id):
+    """Get video metadata"""
     user = dbcol.find_one({"_id": chat_id})
     return user.get("video", "Encoded By @TechifyBots") if user else "Encoded By @TechifyBots"
 
-# Editing state functions
-def set_editing_state(chat_id, field, message_id):
-    dbcol.update_one({"_id": chat_id}, {"$set": {
-        "editing_metadata_field": field,
-        "editing_message_id": message_id
-    }})
+def set_video(chat_id, video):
+    """Set video metadata"""
+    dbcol.update_one({"_id": chat_id}, {"$set": {"video": video}})
 
-def clear_editing_state(chat_id):
-    dbcol.update_one({"_id": chat_id}, {"$unset": {
-        "editing_metadata_field": "",
-        "editing_message_id": ""
-    }})
-
-def get_editing_state(chat_id):
-    user = dbcol.find_one({"_id": chat_id})
-    if user:
-        field = user.get("editing_metadata_field", "")
-        message_id = user.get("editing_message_id", "")
-        return field, message_id
-    return "", ""
+# Old function for backward compatibility
+def setmetacode(chat_id, metadata_code):
+    dbcol.update_one({"_id": chat_id}, {"$set": {"metadata_code": metadata_code}})
 
 # ============= METADATA FUNCTION CODE =============== #
 
@@ -184,18 +171,21 @@ def find(chat_id):
     id = {"_id": chat_id}
     x = dbcol.find(id)
     for i in x:
-        file = i.get("file_id", None)
-        caption = i.get("caption", None)
-        metadata = i.get("metadata", "Off")
-        metadata_code = i.get("metadata_code", "By @TechifyBots")
-        title = i.get("title", "Encoded by @TechifyBots")
-        author = i.get("author", "@TechifyBots")
-        artist = i.get("artist", "@TechifyBots")
-        audio = i.get("audio", "By @TechifyBots")
-        subtitle = i.get("subtitle", "By @TechifyBots")
-        video = i.get("video", "Encoded By @TechifyBots")
-        
-        return [file, caption, metadata, metadata_code, title, author, artist, audio, subtitle, video]
+        file = i["file_id"]
+        try:
+            caption = i["caption"]
+        except:
+            caption = None
+        try:
+            metadata = i["metadata"]
+        except:
+            metadata = "Off"
+        try:
+            metadata_code = i["metadata_code"]
+        except:
+            metadata_code = None
+            
+        return [file, caption, metadata, metadata_code]
 
 def getid():
     values = []
